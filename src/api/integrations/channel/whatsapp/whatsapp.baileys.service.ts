@@ -4785,22 +4785,113 @@ export class BaileysStartupService extends ChannelStartupService {
       throw new NotFoundException('Number is not on WhatsApp');
     }
 
+    // [Lylead] WhatsApp asocia las listas al chat por su LID. whatsappNumber() convierte un
+    // @lid de vuelta a número de teléfono (caché onWhatsapp), y la asociación quedaba sobre
+    // un JID que el celular no reconoce. Ver evolution-api#2524 / #1872.
+    const targetJid = await this.resolveLabelTargetJid(data.number, contact.jid);
+
+    let verdict: { ok: boolean; detail: string } | null = null;
     try {
-      if (data.action === 'add') {
-        await this.client.addChatLabel(contact.jid, data.labelId);
-        await this.addLabel(data.labelId, this.instanceId, contact.jid);
-
-        return { numberJid: contact.jid, labelId: data.labelId, add: true };
-      }
-      if (data.action === 'remove') {
-        await this.client.removeChatLabel(contact.jid, data.labelId);
-        await this.removeLabel(data.labelId, this.instanceId, contact.jid);
-
-        return { numberJid: contact.jid, labelId: data.labelId, remove: true };
+      verdict = await this.applyChatLabelPatch(targetJid, data.labelId, data.action);
+      if (verdict && !verdict.ok) {
+        // Un rechazo casi siempre es copia local desfasada: resincronizar completo y reintentar una vez.
+        this.logger.warn('[labels] full app-state resync of "regular" before retrying');
+        await this.client.resyncAppState(['regular'], true);
+        verdict = await this.applyChatLabelPatch(targetJid, data.labelId, data.action);
       }
     } catch (error) {
       throw new BadRequestException(`Unable to ${data.action} label to chat`, error.toString());
     }
+    if (verdict && !verdict.ok) {
+      // Antes esto se reportaba como éxito: la copia local de Baileys estaba desfasada y el
+      // servidor descartaba el cambio sin que nadie se enterara.
+      throw new BadRequestException(
+        `WhatsApp rejected the label ${data.action}`,
+        `jid=${targetJid} labelId=${data.labelId} ${verdict.detail}`,
+      );
+    }
+
+    const jidsToPersist = [...new Set([targetJid, contact.jid].filter(Boolean))];
+    for (const jid of jidsToPersist) {
+      if (data.action === 'add') await this.addLabel(data.labelId, this.instanceId, jid);
+      else await this.removeLabel(data.labelId, this.instanceId, jid);
+    }
+
+    return {
+      numberJid: targetJid,
+      phoneJid: contact.jid,
+      labelId: data.labelId,
+      [data.action]: true,
+      // true = el servidor de WhatsApp confirmó la nueva versión de las listas.
+      // false = no llegó confirmación (no se puede asegurar que el celular la vea).
+      confirmed: verdict?.ok === true,
+      serverDetail: verdict?.detail ?? null,
+    };
+  }
+
+  /** [Lylead] Devuelve el @lid del chat cuando se conoce; si no, el JID de teléfono. */
+  private async resolveLabelTargetJid(rawNumber: string, resolvedJid: string): Promise<string> {
+    const raw = String(rawNumber || '').trim();
+    if (raw.endsWith('@lid')) return raw;
+    if (resolvedJid?.endsWith('@lid')) return resolvedJid;
+    try {
+      const lid = await this.client.signalRepository?.lidMapping?.getLIDForPN(resolvedJid);
+      if (lid && String(lid).endsWith('@lid')) return String(lid);
+    } catch (error) {
+      this.logger.verbose(`[labels] could not resolve LID for ${resolvedJid}: ${error}`);
+    }
+    return resolvedJid;
+  }
+
+  /**
+   * [Lylead] Envía el cambio de lista y lee la respuesta del servidor a ese cambio.
+   * Baileys hace `await query(node)` e ignora la respuesta, así que un rechazo se perdía.
+   * Devuelve null si no se vio respuesta de la colección 'regular' (sin confirmación).
+   */
+  private async applyChatLabelPatch(
+    jid: string,
+    labelId: string,
+    action: 'add' | 'remove',
+  ): Promise<{ ok: boolean; detail: string } | null> {
+    // Objeto contenedor: TypeScript no sigue asignaciones hechas dentro del callback.
+    const seen: { verdict: { ok: boolean; detail: string } | null } = { verdict: null };
+    const onFrame = (frame: any) => {
+      try {
+        if (frame?.tag !== 'iq' || !Array.isArray(frame.content)) return;
+        const sync = frame.content.find((c: any) => c?.tag === 'sync');
+        const collections: any[] = Array.isArray(sync?.content) ? sync.content : [];
+        const regular = collections.find((c: any) => c?.tag === 'collection' && c?.attrs?.name === 'regular');
+        if (!regular) return;
+        const children: any[] = Array.isArray(regular.content) ? regular.content : [];
+        // appPatch() resincroniza antes de enviar: esa respuesta trae <patches>/<snapshot> y no
+        // es la del cambio. La última respuesta sin ellos es la del parche.
+        if (children.some((c: any) => c?.tag === 'patches' || c?.tag === 'snapshot')) return;
+        const errorNode = children.find((c: any) => c?.tag === 'error');
+        if (regular.attrs?.type === 'error' || errorNode) {
+          seen.verdict = { ok: false, detail: `code=${errorNode?.attrs?.code ?? '?'} ${errorNode?.attrs?.text ?? ''}`.trim() };
+        } else if (regular.attrs?.version) {
+          seen.verdict = { ok: true, detail: `version=${regular.attrs.version}` };
+        }
+      } catch {
+        // la lectura de la respuesta nunca debe romper el etiquetado
+      }
+    };
+
+    this.client.ws.on('frame', onFrame);
+    try {
+      if (action === 'add') await this.client.addChatLabel(jid, labelId);
+      else await this.client.removeChatLabel(jid, labelId);
+    } finally {
+      this.client.ws.off('frame', onFrame);
+    }
+
+    const verdict = seen.verdict;
+    if (verdict && !verdict.ok) {
+      this.logger.warn(`[labels] WhatsApp rejected ${action} label ${labelId} on ${jid}: ${verdict.detail}`);
+    } else if (!verdict) {
+      this.logger.warn(`[labels] no server confirmation for ${action} label ${labelId} on ${jid}`);
+    }
+    return verdict;
   }
 
   // Group
