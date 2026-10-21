@@ -4790,6 +4790,25 @@ export class BaileysStartupService extends ChannelStartupService {
     // un JID que el celular no reconoce. Ver evolution-api#2524 / #1872.
     const targetJid = await this.resolveLabelTargetJid(data.number, contact.jid);
 
+    // [Lylead] El parche de lista es un app-state patch. Si esta sesión no tiene la
+    // app-state key que envía el dispositivo primario (appStateSyncKeyShare),
+    // Baileys no puede descifrar el snapshot de la colección 'regular' y envía el
+    // parche con version 0 y LTHash vacío. WhatsApp lo rechaza y responde
+    // <stream:error code="401"><conflict type="device_removed"/>, lo que
+    // DESCONECTA el canal (y con él el resto de dispositivos de la cuenta).
+    // Comprobamos el app-state ANTES de escribir: si no está listo, fallamos con
+    // 400 y la sesión sobrevive intacta.
+    const appState = await this.getAppStateReadiness();
+    if (!appState.ready) {
+      this.logger.warn(
+        `[labels] app-state no disponible (${appState.detail}); no se aplica la etiqueta para no desconectar la sesión`,
+      );
+      throw new BadRequestException(
+        'Cannot apply label: this session has no app-state sync key, so WhatsApp would reject the change and disconnect this device. Reconnect the device and try again.',
+        appState.detail,
+      );
+    }
+
     let verdict: { ok: boolean; detail: string } | null = null;
     try {
       verdict = await this.applyChatLabelPatch(targetJid, data.labelId, data.action);
@@ -4827,6 +4846,50 @@ export class BaileysStartupService extends ChannelStartupService {
       confirmed: verdict?.ok === true,
       serverDetail: verdict?.detail ?? null,
     };
+  }
+
+  /**
+   * [Lylead] ¿La sesión puede escribir app-state (etiquetas) sin que WhatsApp
+   * rechace el parche y expulse el dispositivo?
+   *
+   * Necesita dos cosas:
+   *  1. La app-state key que envía el dispositivo primario (appStateSyncKeyShare).
+   *     Sin ella `getAppStateSyncKey()` devuelve null y no se puede descifrar el
+   *     snapshot 'regular' ("failed to find key ... to decode mutation").
+   *  2. Un baseline válido de la colección 'regular' (version >= 1). Con version 0
+   *     el parche sale con LTHash vacío y el servidor lo rechaza.
+   */
+  private async getAppStateReadiness(): Promise<{ ready: boolean; detail: string }> {
+    try {
+      const authState = (this.client as any)?.authState;
+      if (!authState) {
+        return { ready: false, detail: 'la sesión no expone authState' };
+      }
+      if (!authState.creds?.myAppStateKeyId) {
+        return {
+          ready: false,
+          detail: 'myAppStateKeyId ausente: el dispositivo primario nunca compartió la app-state key',
+        };
+      }
+      const appStateKeys = await authState.keys?.get('app-state-sync-key');
+      const keyCount = appStateKeys ? Object.keys(appStateKeys).length : 0;
+      if (!keyCount) {
+        return {
+          ready: false,
+          detail: 'app-state-sync-key vacía: el dispositivo primario nunca compartió la app-state key',
+        };
+      }
+      const { regular: version } = await authState.keys?.get('app-state-sync-version', ['regular']);
+      if (!version || Number(version) < 1) {
+        return {
+          ready: false,
+          detail: `baseline de la colección 'regular' ausente (version=${version ?? 'null'})`,
+        };
+      }
+      return { ready: true, detail: `app-state listo (regular v${version}, ${keyCount} key(s))` };
+    } catch (error) {
+      return { ready: false, detail: `no se pudo verificar el app-state: ${error}` };
+    }
   }
 
   /** [Lylead] Devuelve el @lid del chat cuando se conoce; si no, el JID de teléfono. */
