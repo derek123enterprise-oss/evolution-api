@@ -56,6 +56,15 @@ function main() {
     `${indent}        { statusCode: 400 },`,
     `${indent}    );`,
     `${indent}}`,
+    `${indent}// ${MARKER}: la clave con la que se cifra el patch la comparte el dispositivo`,
+    `${indent}// primario. Sin ella el patch se va corrupto y también expulsan el dispositivo.`,
+    `${indent}if (!authState.creds?.appStateSyncKey) {`,
+    `${indent}    throw new Boom(`,
+    `${indent}        'App state sync key missing for ' + name +`,
+    `${indent}            + ': refusing to send an app-state patch without the primary device key (it removes this device with 401 conflict/device_removed)',`,
+    `${indent}        { statusCode: 400 },`,
+    `${indent}    );`,
+    `${indent}}`,
   ].join('\n');
 
   const patched = source.replace(re, `${match[0]}\n${guard}`);

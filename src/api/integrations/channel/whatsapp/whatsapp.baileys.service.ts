@@ -4865,28 +4865,35 @@ export class BaileysStartupService extends ChannelStartupService {
       if (!authState) {
         return { ready: false, detail: 'la sesión no expone authState' };
       }
+      // Baileys cifra los parches de app-state con `creds.appStateSyncKey`, que comparte
+      // el dispositivo primario. Sin esa clave el parche sale corrupto, WhatsApp lo
+      // rechaza y responde 401 conflict/device_removed (expulsa este dispositivo y al
+      // resto de la cuenta), así que no se puede escribir la etiqueta.
+      if (!authState.creds?.appStateSyncKey) {
+        return {
+          ready: false,
+          detail:
+            'appStateSyncKey ausente: el dispositivo primario no compartió la clave de app-state, WhatsApp rechazaría el cambio y expulsaría este dispositivo',
+        };
+      }
       if (!authState.creds?.myAppStateKeyId) {
+        return { ready: false, detail: 'myAppStateKeyId ausente' };
+      }
+      // OJO: el key store de Baileys 7 es `get(type, ids)`; `ids` debe ser un array.
+      let version = 0;
+      try {
+        const versions = await authState.keys?.get('app-state-sync-version', ['regular']);
+        version = Number((versions as any)?.regular ?? 0);
+      } catch (error) {
+        return { ready: false, detail: `no se pudo leer el baseline de app-state: ${error}` };
+      }
+      if (!version || version < 1) {
         return {
           ready: false,
-          detail: 'myAppStateKeyId ausente: el dispositivo primario nunca compartió la app-state key',
+          detail: `baseline de la colección 'regular' ausente (version=${version || 'null'})`,
         };
       }
-      const appStateKeys = await authState.keys?.get('app-state-sync-key');
-      const keyCount = appStateKeys ? Object.keys(appStateKeys).length : 0;
-      if (!keyCount) {
-        return {
-          ready: false,
-          detail: 'app-state-sync-key vacía: el dispositivo primario nunca compartió la app-state key',
-        };
-      }
-      const { regular: version } = await authState.keys?.get('app-state-sync-version', ['regular']);
-      if (!version || Number(version) < 1) {
-        return {
-          ready: false,
-          detail: `baseline de la colección 'regular' ausente (version=${version ?? 'null'})`,
-        };
-      }
-      return { ready: true, detail: `app-state listo (regular v${version}, ${keyCount} key(s))` };
+      return { ready: true, detail: `app-state listo (regular v${version})` };
     } catch (error) {
       return { ready: false, detail: `no se pudo verificar el app-state: ${error}` };
     }
