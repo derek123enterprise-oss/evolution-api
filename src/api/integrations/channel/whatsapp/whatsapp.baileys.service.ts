@@ -4865,19 +4865,27 @@ export class BaileysStartupService extends ChannelStartupService {
       if (!authState) {
         return { ready: false, detail: 'la sesión no expone authState' };
       }
-      // Baileys cifra los parches de app-state con `creds.appStateSyncKey`, que comparte
-      // el dispositivo primario. Sin esa clave el parche sale corrupto, WhatsApp lo
-      // rechaza y responde 401 conflict/device_removed (expulsa este dispositivo y al
-      // resto de la cuenta), así que no se puede escribir la etiqueta.
-      if (!authState.creds?.appStateSyncKey) {
+      const keyId = authState.creds?.myAppStateKeyId;
+      if (!keyId) {
         return {
           ready: false,
-          detail:
-            'appStateSyncKey ausente: el dispositivo primario no compartió la clave de app-state, WhatsApp rechazaría el cambio y expulsaría este dispositivo',
+          detail: 'myAppStateKeyId ausente: el dispositivo primario nunca compartió la app-state key',
         };
       }
-      if (!authState.creds?.myAppStateKeyId) {
-        return { ready: false, detail: 'myAppStateKeyId ausente' };
+      // La clave NO vive en creds: Baileys la guarda en el key store y la usa para
+      // cifrar cada patch (`authState.keys.get('app-state-sync-key', [keyId])`).
+      let keyData: any = null;
+      try {
+        const stored = await authState.keys?.get('app-state-sync-key', [keyId]);
+        keyData = (stored as any)?.[keyId] ?? null;
+      } catch (error) {
+        return { ready: false, detail: `no se pudo leer la clave de app-state: ${error}` };
+      }
+      if (!keyData) {
+        return {
+          ready: false,
+          detail: `sin clave de app-state para ${keyId}: el dispositivo primario no la compartió o se perdió al reiniciar el servidor`,
+        };
       }
       // OJO: el key store de Baileys 7 es `get(type, ids)`; `ids` debe ser un array.
       let version = 0;
