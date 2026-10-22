@@ -1,4 +1,4 @@
-import { getCollectionsDto } from '@api/dto/business.dto';
+﻿import { getCollectionsDto } from '@api/dto/business.dto';
 import { OfferCallDto } from '@api/dto/call.dto';
 import {
   ArchiveChatDto,
@@ -170,7 +170,7 @@ export interface ExtendedIMessageKey extends proto.IMessageKey {
 
 const groupMetadataCache = new CacheService(new CacheEngine(configService, 'groups').getEngine());
 
-// Adicione a função getVideoDuration no início do arquivo
+// Adicione a funÃ§Ã£o getVideoDuration no inÃ­cio do arquivo
 async function getVideoDuration(input: Buffer | string | Readable): Promise<number> {
   const MediaInfoFactory = (await import('mediainfo.js')).default;
   const mediainfo = await MediaInfoFactory({ format: 'JSON' });
@@ -218,7 +218,7 @@ async function getVideoDuration(input: Buffer | string | Readable): Promise<numb
       return data.slice(offset, offset + size);
     };
   } else {
-    throw new Error('Tipo de entrada não suportado');
+    throw new Error('Tipo de entrada nÃ£o suportado');
   }
 
   const result = await mediainfo.analyzeData(() => fileSize, readChunk);
@@ -294,7 +294,7 @@ export class BaileysStartupService extends ChannelStartupService {
       try {
         await this.client.logout('Log out instance: ' + this.instanceName);
       } catch (error) {
-        // Downgraded to warn: logout failures here are recoverable — the
+        // Downgraded to warn: logout failures here are recoverable â€” the
         // credential cleanup below still runs and the DB row is forced to 'close'.
         this.logger.warn(
           `logoutInstance: client.logout() failed (${(error as Error)?.message}), proceeding with credential cleanup`,
@@ -306,7 +306,7 @@ export class BaileysStartupService extends ChannelStartupService {
         this.client.ws?.close();
         this.client.end(new Error('Instance logout'));
       } catch {
-        // ignore — ws may already be closed
+        // ignore â€” ws may already be closed
       }
     }
 
@@ -493,7 +493,7 @@ export class BaileysStartupService extends ChannelStartupService {
       }
 
       const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
-      // 408 = request timeout — added per #2501 to avoid reconnect loops on
+      // 408 = request timeout â€” added per #2501 to avoid reconnect loops on
       // transient network drops where the server returned a 408 in the close.
       const codesToNotReconnect = [DisconnectReason.loggedOut, DisconnectReason.forbidden, 402, 406, 408];
 
@@ -573,9 +573,9 @@ export class BaileysStartupService extends ChannelStartupService {
       const formattedName = this.instance.name;
       this.logger.info(
         `
-        ┌──────────────────────────────┐
-        │    CONNECTED TO WHATSAPP     │
-        └──────────────────────────────┘`.replace(/^ +/gm, '  '),
+        â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+        â”‚    CONNECTED TO WHATSAPP     â”‚
+        â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜`.replace(/^ +/gm, '  '),
       );
       this.logger.info(
         `
@@ -756,7 +756,7 @@ export class BaileysStartupService extends ChannelStartupService {
       msgRetryCounterCache: this.msgRetryCounterCache,
       generateHighQualityLinkPreview: true,
       getMessage: async (key) => (await this.getMessage(key)) as Promise<proto.IMessage>,
-      // Removido browserOptions para usar Multi-Device nativo (não WebClient)
+      // Removido browserOptions para usar Multi-Device nativo (nÃ£o WebClient)
       markOnlineOnConnect: this.localSettings.alwaysOnline,
       retryRequestDelayMs: 350,
       maxMsgRetryCount: 4,
@@ -825,7 +825,7 @@ export class BaileysStartupService extends ChannelStartupService {
       this.loadWebhook();
       this.loadProxy();
 
-      // Remontar o messageProcessor para garantir que está funcionando após reconexão
+      // Remontar o messageProcessor para garantir que estÃ¡ funcionando apÃ³s reconexÃ£o
       this.messageProcessor.mount({
         onMessageReceive: this.messageHandle['messages.upsert'].bind(this),
       });
@@ -1566,7 +1566,7 @@ export class BaileysStartupService extends ChannelStartupService {
 
                   const message: any = received;
 
-                  // Verificação adicional para garantir que há conteúdo de mídia real
+                  // VerificaÃ§Ã£o adicional para garantir que hÃ¡ conteÃºdo de mÃ­dia real
                   const hasRealMedia = this.hasValidMediaContent(message);
 
                   if (!hasRealMedia) {
@@ -1978,15 +1978,15 @@ export class BaileysStartupService extends ChannelStartupService {
       };
 
       try {
-        // Usa o mesmo método que o endpoint /group/participants
+        // Usa o mesmo mÃ©todo que o endpoint /group/participants
         const groupParticipants = await this.findParticipants({ groupJid: participantsUpdate.id });
 
-        // Validação para garantir que temos dados válidos
+        // ValidaÃ§Ã£o para garantir que temos dados vÃ¡lidos
         if (!groupParticipants?.participants || !Array.isArray(groupParticipants.participants)) {
           throw new Error('Invalid participant data received from findParticipants');
         }
 
-        // Filtra apenas os participantes que estão no evento
+        // Filtra apenas os participantes que estÃ£o no evento
         const resolvedParticipants = participantsUpdate.participants.map((participantId) => {
           const participantData = groupParticipants.participants.find((p) => p.id === participantId);
 
@@ -2005,10 +2005,10 @@ export class BaileysStartupService extends ChannelStartupService {
           };
         });
 
-        // Mantém formato original + adiciona dados resolvidos
+        // MantÃ©m formato original + adiciona dados resolvidos
         const enhancedParticipantsUpdate = {
           ...participantsUpdate,
-          participants: participantsUpdate.participants, // Mantém array original de strings
+          participants: participantsUpdate.participants, // MantÃ©m array original de strings
           // Adiciona dados resolvidos em campo separado
           participantsData: resolvedParticipants,
         };
@@ -2018,7 +2018,7 @@ export class BaileysStartupService extends ChannelStartupService {
         this.logger.error(
           `Failed to resolve participant data for GROUP_PARTICIPANTS_UPDATE webhook: ${error.message} | Group: ${participantsUpdate.id} | Participants: ${participantsUpdate.participants.length}`,
         );
-        // Fallback - envia sem conversão
+        // Fallback - envia sem conversÃ£o
         this.sendDataWebhook(Events.GROUP_PARTICIPANTS_UPDATE, participantsUpdate);
       }
 
@@ -2414,7 +2414,7 @@ export class BaileysStartupService extends ChannelStartupService {
 
     if (ephemeralExpiration) option.ephemeralExpiration = ephemeralExpiration;
 
-    // NOTE: NÃO DEVEMOS GERAR O messageId AQUI, SOMENTE SE VIER INFORMADO POR PARAMETRO. A GERAÇÃO ANTERIOR IMPEDE O WZAP DE IDENTIFICAR A SOURCE.
+    // NOTE: NÃƒO DEVEMOS GERAR O messageId AQUI, SOMENTE SE VIER INFORMADO POR PARAMETRO. A GERAÃ‡ÃƒO ANTERIOR IMPEDE O WZAP DE IDENTIFICAR A SOURCE.
     if (messageId) option.messageId = messageId;
 
     if (message['viewOnceMessage'] || message['interactiveMessage'] || message['listMessage']) {
@@ -2742,7 +2742,7 @@ export class BaileysStartupService extends ChannelStartupService {
 
             const message: any = messageRaw;
 
-            // Verificação adicional para garantir que há conteúdo de mídia real
+            // VerificaÃ§Ã£o adicional para garantir que hÃ¡ conteÃºdo de mÃ­dia real
             const hasRealMedia = this.hasValidMediaContent(message);
 
             if (!hasRealMedia) {
@@ -3451,7 +3451,7 @@ export class BaileysStartupService extends ChannelStartupService {
         let command = ffmpeg(inputAudioStream);
 
         if (isLpcm) {
-          this.logger.verbose('Detected LPCM input – applying raw PCM settings');
+          this.logger.verbose('Detected LPCM input â€“ applying raw PCM settings');
           command = command.inputFormat('s16le').inputOptions(['-ar', '24000', '-ac', '1']);
         }
 
@@ -3674,7 +3674,7 @@ export class BaileysStartupService extends ChannelStartupService {
     const hasCTAButtons = data.buttons.some((btn) => btn.type === 'url' || btn.type === 'call' || btn.type === 'copy');
 
     /* =========================
-     * REGRAS DE VALIDAÇÃO
+     * REGRAS DE VALIDAÃ‡ÃƒO
      * ========================= */
 
     // Reply
@@ -3747,7 +3747,7 @@ export class BaileysStartupService extends ChannelStartupService {
       : null;
 
     /* =========================
-     * BOTÕES
+     * BOTÃ•ES
      * ========================= */
 
     const buttons = data.buttons.map((btn) => ({
@@ -3824,8 +3824,8 @@ export class BaileysStartupService extends ChannelStartupService {
   }
 
   public async listMessage(data: SendListDto) {
-    // Formato LEGADO (`listMessage` com listType SINGLE_SELECT) — funciona em Web, iOS e Android.
-    // O formato moderno (interactiveMessage + nativeFlowMessage com single_select) só renderiza
+    // Formato LEGADO (`listMessage` com listType SINGLE_SELECT) â€” funciona em Web, iOS e Android.
+    // O formato moderno (interactiveMessage + nativeFlowMessage com single_select) sÃ³ renderiza
     // em mobile recente; no WhatsApp Web/Desktop a mensagem chega vazia.
     const message: proto.IMessage = {
       listMessage: {
@@ -3888,7 +3888,7 @@ export class BaileysStartupService extends ChannelStartupService {
         }),
       );
 
-    // Otimização iOS: 1 card sem imagem → nativeFlowMessage direto (sem carouselMessage wrapper)
+    // OtimizaÃ§Ã£o iOS: 1 card sem imagem â†’ nativeFlowMessage direto (sem carouselMessage wrapper)
     const isSingleNoImage = data.cards.length === 1 && !data.cards[0].imageUrl;
 
     let interactiveMessage: proto.Message.IInteractiveMessage;
@@ -4154,7 +4154,7 @@ export class BaileysStartupService extends ChannelStartupService {
     // Combine results
     onWhatsapp.push(...verifiedUsers);
 
-    // TODO: Salvar no cache apenas números que NÃO estavam no cache
+    // TODO: Salvar no cache apenas nÃºmeros que NÃƒO estavam no cache
     const numbersToCache = onWhatsapp.filter((user) => {
       if (!user.exists) return false;
       // Verifica se estava no cache usando jidOptions
@@ -4163,7 +4163,7 @@ export class BaileysStartupService extends ChannelStartupService {
     });
 
     if (numbersToCache.length > 0) {
-      this.logger.verbose(`Salvando ${numbersToCache.length} números no cache`);
+      this.logger.verbose(`Salvando ${numbersToCache.length} nÃºmeros no cache`);
       await saveOnWhatsappCache(
         numbersToCache.map((user) => ({
           remoteJid: user.jid,
@@ -4786,22 +4786,22 @@ export class BaileysStartupService extends ChannelStartupService {
     }
 
     // [Lylead] WhatsApp asocia las listas al chat por su LID. whatsappNumber() convierte un
-    // @lid de vuelta a número de teléfono (caché onWhatsapp), y la asociación quedaba sobre
+    // @lid de vuelta a nÃºmero de telÃ©fono (cachÃ© onWhatsapp), y la asociaciÃ³n quedaba sobre
     // un JID que el celular no reconoce. Ver evolution-api#2524 / #1872.
     const targetJid = await this.resolveLabelTargetJid(data.number, contact.jid);
 
-    // [Lylead] El parche de lista es un app-state patch. Si esta sesión no tiene la
-    // app-state key que envía el dispositivo primario (appStateSyncKeyShare),
-    // Baileys no puede descifrar el snapshot de la colección 'regular' y envía el
-    // parche con version 0 y LTHash vacío. WhatsApp lo rechaza y responde
+    // [Lylead] El parche de lista es un app-state patch. Si esta sesiÃ³n no tiene la
+    // app-state key que envÃ­a el dispositivo primario (appStateSyncKeyShare),
+    // Baileys no puede descifrar el snapshot de la colecciÃ³n 'regular' y envÃ­a el
+    // parche con version 0 y LTHash vacÃ­o. WhatsApp lo rechaza y responde
     // <stream:error code="401"><conflict type="device_removed"/>, lo que
-    // DESCONECTA el canal (y con él el resto de dispositivos de la cuenta).
-    // Comprobamos el app-state ANTES de escribir: si no está listo, fallamos con
-    // 400 y la sesión sobrevive intacta.
+    // DESCONECTA el canal (y con Ã©l el resto de dispositivos de la cuenta).
+    // Comprobamos el app-state ANTES de escribir: si no estÃ¡ listo, fallamos con
+    // 400 y la sesiÃ³n sobrevive intacta.
     const appState = await this.getAppStateReadiness();
     if (!appState.ready) {
       this.logger.warn(
-        `[labels] app-state no disponible (${appState.detail}); no se aplica la etiqueta para no desconectar la sesión`,
+        `[labels] app-state no disponible (${appState.detail}); no se aplica la etiqueta para no desconectar la sesiÃ³n`,
       );
       throw new BadRequestException(
         'Cannot apply label: this session has no app-state sync key, so WhatsApp would reject the change and disconnect this device. Reconnect the device and try again.',
@@ -4822,7 +4822,7 @@ export class BaileysStartupService extends ChannelStartupService {
       throw new BadRequestException(`Unable to ${data.action} label to chat`, error.toString());
     }
     if (verdict && !verdict.ok) {
-      // Antes esto se reportaba como éxito: la copia local de Baileys estaba desfasada y el
+      // Antes esto se reportaba como Ã©xito: la copia local de Baileys estaba desfasada y el
       // servidor descartaba el cambio sin que nadie se enterara.
       throw new BadRequestException(
         `WhatsApp rejected the label ${data.action}`,
@@ -4841,35 +4841,35 @@ export class BaileysStartupService extends ChannelStartupService {
       phoneJid: contact.jid,
       labelId: data.labelId,
       [data.action]: true,
-      // true = el servidor de WhatsApp confirmó la nueva versión de las listas.
-      // false = no llegó confirmación (no se puede asegurar que el celular la vea).
+      // true = el servidor de WhatsApp confirmÃ³ la nueva versiÃ³n de las listas.
+      // false = no llegÃ³ confirmaciÃ³n (no se puede asegurar que el celular la vea).
       confirmed: verdict?.ok === true,
       serverDetail: verdict?.detail ?? null,
     };
   }
 
   /**
-   * [Lylead] ¿La sesión puede escribir app-state (etiquetas) sin que WhatsApp
+   * [Lylead] Â¿La sesiÃ³n puede escribir app-state (etiquetas) sin que WhatsApp
    * rechace el parche y expulse el dispositivo?
    *
    * Necesita dos cosas:
-   *  1. La app-state key que envía el dispositivo primario (appStateSyncKeyShare).
+   *  1. La app-state key que envÃ­a el dispositivo primario (appStateSyncKeyShare).
    *     Sin ella `getAppStateSyncKey()` devuelve null y no se puede descifrar el
    *     snapshot 'regular' ("failed to find key ... to decode mutation").
-   *  2. Un baseline válido de la colección 'regular' (version >= 1). Con version 0
-   *     el parche sale con LTHash vacío y el servidor lo rechaza.
+   *  2. Un baseline vÃ¡lido de la colecciÃ³n 'regular' (version >= 1). Con version 0
+   *     el parche sale con LTHash vacÃ­o y el servidor lo rechaza.
    */
   private async getAppStateReadiness(): Promise<{ ready: boolean; detail: string }> {
     try {
       const authState = (this.client as any)?.authState;
       if (!authState) {
-        return { ready: false, detail: 'la sesión no expone authState' };
+        return { ready: false, detail: 'la sesiÃ³n no expone authState' };
       }
       const keyId = authState.creds?.myAppStateKeyId;
       if (!keyId) {
         return {
           ready: false,
-          detail: 'myAppStateKeyId ausente: el dispositivo primario nunca compartió la app-state key',
+          detail: 'myAppStateKeyId ausente: el dispositivo primario nunca compartiÃ³ la app-state key',
         };
       }
       // La clave NO vive en creds: Baileys la guarda en el key store y la usa para
@@ -4884,21 +4884,22 @@ export class BaileysStartupService extends ChannelStartupService {
       if (!keyData) {
         return {
           ready: false,
-          detail: `sin clave de app-state para ${keyId}: el dispositivo primario no la compartió o se perdió al reiniciar el servidor`,
+          detail: `sin clave de app-state para ${keyId}: el dispositivo primario no la compartiÃ³ o se perdiÃ³ al reiniciar el servidor`,
         };
       }
       // OJO: el key store de Baileys 7 es `get(type, ids)`; `ids` debe ser un array.
       let version = 0;
       try {
         const versions = await authState.keys?.get('app-state-sync-version', ['regular']);
-        version = Number((versions as any)?.regular ?? 0);
+        const rawVersion = (versions as any)?.regular;
+        version = typeof rawVersion === 'number' ? rawVersion : Number(rawVersion?.version ?? 0);
       } catch (error) {
         return { ready: false, detail: `no se pudo leer el baseline de app-state: ${error}` };
       }
       if (!version || version < 1) {
         return {
           ready: false,
-          detail: `baseline de la colección 'regular' ausente (version=${version || 'null'})`,
+          detail: `baseline de la colecciÃ³n 'regular' ausente (version=${version || 'null'})`,
         };
       }
       return { ready: true, detail: `app-state listo (regular v${version})` };
@@ -4907,7 +4908,7 @@ export class BaileysStartupService extends ChannelStartupService {
     }
   }
 
-  /** [Lylead] Devuelve el @lid del chat cuando se conoce; si no, el JID de teléfono. */
+  /** [Lylead] Devuelve el @lid del chat cuando se conoce; si no, el JID de telÃ©fono. */
   private async resolveLabelTargetJid(rawNumber: string, resolvedJid: string): Promise<string> {
     const raw = String(rawNumber || '').trim();
     if (raw.endsWith('@lid')) return raw;
@@ -4922,9 +4923,9 @@ export class BaileysStartupService extends ChannelStartupService {
   }
 
   /**
-   * [Lylead] Envía el cambio de lista y lee la respuesta del servidor a ese cambio.
-   * Baileys hace `await query(node)` e ignora la respuesta, así que un rechazo se perdía.
-   * Devuelve null si no se vio respuesta de la colección 'regular' (sin confirmación).
+   * [Lylead] EnvÃ­a el cambio de lista y lee la respuesta del servidor a ese cambio.
+   * Baileys hace `await query(node)` e ignora la respuesta, asÃ­ que un rechazo se perdÃ­a.
+   * Devuelve null si no se vio respuesta de la colecciÃ³n 'regular' (sin confirmaciÃ³n).
    */
   private async applyChatLabelPatch(
     jid: string,
@@ -4942,7 +4943,7 @@ export class BaileysStartupService extends ChannelStartupService {
         if (!regular) return;
         const children: any[] = Array.isArray(regular.content) ? regular.content : [];
         // appPatch() resincroniza antes de enviar: esa respuesta trae <patches>/<snapshot> y no
-        // es la del cambio. La última respuesta sin ellos es la del parche.
+        // es la del cambio. La Ãºltima respuesta sin ellos es la del parche.
         if (children.some((c: any) => c?.tag === 'patches' || c?.tag === 'snapshot')) return;
         const errorNode = children.find((c: any) => c?.tag === 'error');
         if (regular.attrs?.type === 'error' || errorNode) {
@@ -5358,7 +5359,7 @@ export class BaileysStartupService extends ChannelStartupService {
       pushName:
         message.pushName ||
         (message.key.fromMe
-          ? 'Você'
+          ? 'VocÃª'
           : message?.participant || (message.key?.participant ? message.key.participant.split('@')[0] : null)),
       message: this.deserializeMessageBuffers({ ...message.message }),
       messageType: getContentType(message.message),
@@ -5753,7 +5754,7 @@ export class BaileysStartupService extends ChannelStartupService {
 
   public async fetchCollections(instanceName: string, data: getCollectionsDto) {
     const jid = data.number ? createJid(data.number) : this.client?.user?.id;
-    const limit = data.limit <= 20 ? data.limit : 20; //(tem esse limite, não sei porque)
+    const limit = data.limit <= 20 ? data.limit : 20; //(tem esse limite, nÃ£o sei porque)
 
     const onWhatsapp = (await this.whatsappNumber({ numbers: [jid] }))?.shift();
 
@@ -5878,7 +5879,7 @@ export class BaileysStartupService extends ChannelStartupService {
 
       if (!message.pushName) {
         if (messageKey.fromMe) {
-          message.pushName = 'Você';
+          message.pushName = 'VocÃª';
         } else if (message.contextInfo) {
           const contextInfo = message.contextInfo as { participant?: string };
           if (contextInfo.participant) {
@@ -5906,14 +5907,14 @@ export class BaileysStartupService extends ChannelStartupService {
     try {
       this.logger.verbose('Starting poll vote decryption process');
 
-      // Buscar a mensagem de criação da enquete
+      // Buscar a mensagem de criaÃ§Ã£o da enquete
       const pollCreationMessage = (await this.getMessage(pollCreationMessageKey, true)) as proto.IWebMessageInfo;
 
       if (!pollCreationMessage) {
         throw new NotFoundException('Poll creation message not found');
       }
 
-      // Extrair opções da enquete
+      // Extrair opÃ§Ãµes da enquete
       const pollOptions =
         (pollCreationMessage.message as any)?.pollCreationMessage?.options ||
         (pollCreationMessage.message as any)?.pollCreationMessageV3?.options ||
@@ -5942,7 +5943,7 @@ export class BaileysStartupService extends ChannelStartupService {
         pollEncKey = Buffer.from(pollEncKey.toString('utf8'), 'base64');
       }
 
-      // Buscar todas as mensagens de atualização de votos
+      // Buscar todas as mensagens de atualizaÃ§Ã£o de votos
       const allPollUpdateMessages = await this.prismaRepository.message.findMany({
         where: {
           instanceId: this.instanceId,
@@ -5958,7 +5959,7 @@ export class BaileysStartupService extends ChannelStartupService {
 
       this.logger.verbose(`Found ${allPollUpdateMessages.length} pollUpdateMessage messages in database`);
 
-      // Filtrar apenas mensagens relacionadas a esta enquete específica
+      // Filtrar apenas mensagens relacionadas a esta enquete especÃ­fica
       const pollUpdateMessages = allPollUpdateMessages.filter((msg) => {
         const pollUpdate = (msg.message as any)?.pollUpdateMessage;
         if (!pollUpdate) return false;
@@ -6010,21 +6011,21 @@ export class BaileysStartupService extends ChannelStartupService {
         let selectedOptionNames: string[] = [];
         let successfulVoterJid: string | undefined;
 
-        // Verificar se o voto já está descriptografado
+        // Verificar se o voto jÃ¡ estÃ¡ descriptografado
         if (pollVote.selectedOptions && Array.isArray(pollVote.selectedOptions)) {
           const selectedOptions = pollVote.selectedOptions;
           this.logger.verbose('Vote already has selectedOptions, checking format');
 
-          // Verificar se são strings (já descriptografado) ou buffers (precisa descriptografar)
+          // Verificar se sÃ£o strings (jÃ¡ descriptografado) ou buffers (precisa descriptografar)
           if (selectedOptions.length > 0 && typeof selectedOptions[0] === 'string') {
-            // Já está descriptografado como nomes de opções
+            // JÃ¡ estÃ¡ descriptografado como nomes de opÃ§Ãµes
             selectedOptionNames = selectedOptions;
             successfulVoterJid = uniqueVoters[0];
             this.logger.verbose(
               `Using already decrypted vote: voter=${successfulVoterJid}, options=${selectedOptionNames.join(',')}`,
             );
           } else {
-            // Está como hash, precisa converter para nomes
+            // EstÃ¡ como hash, precisa converter para nomes
             selectedOptionNames = pollOptions
               .filter((option: any) => {
                 const hash = createHash('sha256').update(option.optionName).digest();
@@ -6057,14 +6058,14 @@ export class BaileysStartupService extends ChannelStartupService {
                   break;
                 }
               } catch {
-                // Continue tentando outras combinações
+                // Continue tentando outras combinaÃ§Ãµes
               }
             }
             if (decryptedVote) break;
           }
 
           if (decryptedVote && decryptedVote.selectedOptions) {
-            // Converter hashes para nomes de opções
+            // Converter hashes para nomes de opÃ§Ãµes
             selectedOptionNames = pollOptions
               .filter((option: any) => {
                 const hash = createHash('sha256').update(option.optionName).digest();
@@ -6093,7 +6094,7 @@ export class BaileysStartupService extends ChannelStartupService {
           const normalizedVoterJid = jidNormalizedUser(successfulVoterJid);
           const existingVote = votesByUser.get(normalizedVoterJid);
 
-          // Manter apenas o voto mais recente de cada usuário
+          // Manter apenas o voto mais recente de cada usuÃ¡rio
           if (!existingVote || pollUpdateMsg.messageTimestamp > existingVote.timestamp) {
             votesByUser.set(normalizedVoterJid, {
               timestamp: pollUpdateMsg.messageTimestamp,
@@ -6104,10 +6105,10 @@ export class BaileysStartupService extends ChannelStartupService {
         }
       }
 
-      // Agrupar votos por opção
+      // Agrupar votos por opÃ§Ã£o
       const results: Record<string, { votes: number; voters: string[] }> = {};
 
-      // Inicializar todas as opções com zero votos
+      // Inicializar todas as opÃ§Ãµes com zero votos
       pollOptions.forEach((option: any) => {
         results[option.optionName] = {
           votes: 0,
@@ -6133,7 +6134,7 @@ export class BaileysStartupService extends ChannelStartupService {
         (pollCreationMessage.message as any)?.pollCreationMessageV3?.name ||
         'Enquete sem nome';
 
-      // Calcular total de votos únicos
+      // Calcular total de votos Ãºnicos
       const totalVotes = votesByUser.size;
 
       return {
@@ -6197,3 +6198,4 @@ export class BaileysStartupService extends ChannelStartupService {
     };
   }
 }
+
