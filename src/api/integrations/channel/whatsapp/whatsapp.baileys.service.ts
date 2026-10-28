@@ -3924,19 +3924,14 @@ export class BaileysStartupService extends ChannelStartupService {
               header = { hasMediaAttachment: true, imageMessage: prepared.message.imageMessage };
             }
           }
-          // LYLEAD: variantes para diagnosticar botones del carrusel que no
-          // responden en el celular. `lyleadVariant` en el body (temporal).
-          const cardVariant = String((data as any)?.lyleadVariant || '');
-          const withParams = cardVariant === 'params' || cardVariant === 'nobiz' || cardVariant === 'fullbiz';
+          // LYLEAD: título y messageParamsJson por tarjeta (como los botones normales).
           return {
-            header: header
-              ? { ...header, ...(withParams && (card as any).title ? { title: (card as any).title } : {}) }
-              : header,
+            header: header && (card as any).title ? { ...header, title: (card as any).title } : header,
             body: { text: card.body },
             footer: card.footer ? { text: card.footer } : undefined,
             nativeFlowMessage: {
               buttons: buildCardButtons(card),
-              ...(withParams ? { messageParamsJson: JSON.stringify({ from: 'api', templateId: v4() }) } : {}),
+              messageParamsJson: JSON.stringify({ from: 'api', templateId: v4() }),
             },
           } as proto.Message.IInteractiveMessage;
         }),
@@ -3949,12 +3944,11 @@ export class BaileysStartupService extends ChannelStartupService {
     }
 
     const message: proto.IMessage = { interactiveMessage };
-    const variant = String((data as any)?.lyleadVariant || '');
-    const bizNodes: BinaryNode[] | undefined =
-      variant === 'nobiz'
-        ? undefined
-        : variant === 'fullbiz'
-          ? [
+    // LYLEAD: con el nodo biz simple los botones del carrusel se veían pero no
+    // respondían al tocarlos. Con actual_actors/host_storage/privacy_mode_ts y
+    // quality_control (como en Itsukichan/Baileys) "Lo quiero" sí llega
+    // (probado 2026-10-28, variante C).
+    const bizNodes: BinaryNode[] = [
               {
                 tag: 'biz',
                 attrs: {
@@ -3971,8 +3965,7 @@ export class BaileysStartupService extends ChannelStartupService {
                   { tag: 'quality_control', attrs: { source_type: 'third_party' } },
                 ],
               },
-            ]
-          : [buildInteractiveBizNode()];
+            ];
     return await this.sendMessageWithTyping(
       data.number,
       message,
