@@ -2608,8 +2608,17 @@ export class BaileysStartupService extends ChannelStartupService {
 
       const linkPreview = options?.linkPreview === false ? false : undefined;
 
+      // LYLEAD: la tarjeta "externalAdReply" (anuncio) que 2.4 inyecta encima de
+      // la vista previa nativa de Baileys deja el mensaje en SERVER_ACK y sin
+      // miniatura en el celular. 2.3.7 no la tiene y la vista previa nativa
+      // (generateHighQualityLinkPreview) sí funciona. Sólo se activa con
+      // EVOLUTION_EXTERNAL_AD_PREVIEW=true.
       let previewContext: any = undefined;
-      if (linkPreview !== false && (message as any)?.conversation) {
+      if (
+        process.env.EVOLUTION_EXTERNAL_AD_PREVIEW === 'true' &&
+        linkPreview !== false &&
+        (message as any)?.conversation
+      ) {
         previewContext = await this.generateLinkPreview((message as any).conversation);
       }
 
