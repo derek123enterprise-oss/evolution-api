@@ -66,3 +66,9 @@ de un canal abierto debe decir `ready: true`.
 
 En el servidor queda la imagen anterior etiquetada `lylead-labels-rollback-20261028`
 (tiene el error de la llave: usarla sólo con el etiquetado bloqueado).
+
+## Vista previa de enlaces (c9328c0)
+`sendMessageWithTyping` ya no inyecta la tarjeta `externalAdReply` que generaba
+`generateLinkPreview` (formato de anuncio). Sólo se activa con
+`EVOLUTION_EXTERNAL_AD_PREVIEW=true`. Con `linkPreview` distinto de `false`, Baileys
+genera su vista previa nativa (`generateHighQualityLinkPreview`), igual que en 2.3.7.
