@@ -3924,11 +3924,20 @@ export class BaileysStartupService extends ChannelStartupService {
               header = { hasMediaAttachment: true, imageMessage: prepared.message.imageMessage };
             }
           }
+          // LYLEAD: variantes para diagnosticar botones del carrusel que no
+          // responden en el celular. `lyleadVariant` en el body (temporal).
+          const cardVariant = String((data as any)?.lyleadVariant || '');
+          const withParams = cardVariant === 'params' || cardVariant === 'nobiz' || cardVariant === 'fullbiz';
           return {
-            header,
+            header: header
+              ? { ...header, ...(withParams && (card as any).title ? { title: (card as any).title } : {}) }
+              : header,
             body: { text: card.body },
             footer: card.footer ? { text: card.footer } : undefined,
-            nativeFlowMessage: { buttons: buildCardButtons(card) },
+            nativeFlowMessage: {
+              buttons: buildCardButtons(card),
+              ...(withParams ? { messageParamsJson: JSON.stringify({ from: 'api', templateId: v4() }) } : {}),
+            },
           } as proto.Message.IInteractiveMessage;
         }),
       );
@@ -3940,7 +3949,30 @@ export class BaileysStartupService extends ChannelStartupService {
     }
 
     const message: proto.IMessage = { interactiveMessage };
-
+    const variant = String((data as any)?.lyleadVariant || '');
+    const bizNodes: BinaryNode[] | undefined =
+      variant === 'nobiz'
+        ? undefined
+        : variant === 'fullbiz'
+          ? [
+              {
+                tag: 'biz',
+                attrs: {
+                  actual_actors: '2',
+                  host_storage: '2',
+                  privacy_mode_ts: Math.floor(Date.now() / 1000).toString(),
+                },
+                content: [
+                  {
+                    tag: 'interactive',
+                    attrs: { type: 'native_flow', v: '1' },
+                    content: [{ tag: 'native_flow', attrs: { v: '9', name: 'mixed' } }],
+                  },
+                  { tag: 'quality_control', attrs: { source_type: 'third_party' } },
+                ],
+              },
+            ]
+          : [buildInteractiveBizNode()];
     return await this.sendMessageWithTyping(
       data.number,
       message,
@@ -3952,7 +3984,7 @@ export class BaileysStartupService extends ChannelStartupService {
         mentioned: data?.mentioned,
       },
       false,
-      [buildInteractiveBizNode()],
+      bizNodes,
     );
   }
 
