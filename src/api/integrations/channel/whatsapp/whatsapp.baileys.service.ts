@@ -4947,6 +4947,18 @@ export class BaileysStartupService extends ChannelStartupService {
           detail: `sin clave de app-state para ${keyId}: el dispositivo primario no la compartiÃ³ o se perdiÃ³ al reiniciar el servidor`,
         };
       }
+      // [Lylead] La llave tiene que llegar como 32 BYTES. Si el almacén de sesión
+      // la lee con AppStateSyncKeyData.create() (en vez de fromObject) llega como
+      // texto base64 de 44 caracteres: las llaves derivadas salen mal, los cambios
+      // de lista del celular no se descifran y el parche que se enviara iría mal
+      // cifrado (WhatsApp desvincula el dispositivo). Sin bytes, no se escribe.
+      const rawKey = (keyData as any)?.keyData;
+      if (!(rawKey instanceof Uint8Array) || rawKey.length !== 32) {
+        return {
+          ready: false,
+          detail: `la app-state key no está en binario (${typeof rawKey}/${rawKey?.length ?? 0}); revisa que los almacenes de sesión usen AppStateSyncKeyData.fromObject`,
+        };
+      }
       // OJO: el key store de Baileys 7 es `get(type, ids)`; `ids` debe ser un array.
       let version = 0;
       try {
