@@ -116,7 +116,11 @@ export class AuthStateProvider {
               ids.map(async (id) => {
                 let value = await readData(`${type}-${id}`);
                 if (type === 'app-state-sync-key' && value) {
-                  value = proto.Message.AppStateSyncKeyData.create(value);
+                  // [Lylead] fromObject, no create: Baileys 7 guarda keyData como base64 y
+                // fromObject lo convierte a bytes. Con create() la llave queda como texto,
+                // las llaves derivadas salen mal, no se descifra ningún cambio de lista
+                // y los parches que se envían van mal cifrados (WhatsApp expulsa el dispositivo).
+                value = proto.Message.AppStateSyncKeyData.fromObject(value);
                 }
 
                 data[id] = value;
