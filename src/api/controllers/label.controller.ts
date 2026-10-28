@@ -13,6 +13,15 @@ export class LabelController {
     return await this.waMonitor.waInstances[instanceName].handleLabel(data);
   }
 
+  /** [Lylead] Trae del servidor los cambios de listas pendientes (lectura, sin parches). */
+  public async syncLabels({ instanceName }: InstanceDto) {
+    const instance: any = this.waMonitor.waInstances[instanceName];
+    if (!instance || typeof instance.syncLabelsFromServer !== 'function') {
+      return { synced: false, fromVersion: null, toVersion: null, detail: 'este canal no admite etiquetas' };
+    }
+    return await instance.syncLabelsFromServer();
+  }
+
   /** [Lylead] Solo lectura: ¿esta sesión puede escribir etiquetas sin arriesgar la vinculación? */
   public async labelWriteStatus({ instanceName }: InstanceDto) {
     const instance: any = this.waMonitor.waInstances[instanceName];

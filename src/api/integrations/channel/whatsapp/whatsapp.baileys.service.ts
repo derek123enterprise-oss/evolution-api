@@ -4865,6 +4865,50 @@ export class BaileysStartupService extends ChannelStartupService {
    *  2. Un baseline vÃ¡lido de la colecciÃ³n 'regular' (version >= 1). Con version 0
    *     el parche sale con LTHash vacÃ­o y el servidor lo rechaza.
    */
+  /**
+   * [Lylead] POST /label/sync/{instance}: pide al servidor los cambios pendientes
+   * de la colección 'regular' (listas). Es la misma lectura que Baileys hace al
+   * recibir un aviso server_sync; no envía ningún parche. Medido el 28-oct: un
+   * cambio de lista hecho en el celular a veces NO genera ese aviso y solo
+   * llegaba al reconectar. Los cambios nuevos salen como labels.association.
+   */
+  private labelSyncRunning: Promise<any> | null = null;
+  public async syncLabelsFromServer(): Promise<{ synced: boolean; fromVersion: number | null; toVersion: number | null; detail: string }> {
+    if (this.stateConnection?.state !== 'open') {
+      return { synced: false, fromVersion: null, toVersion: null, detail: 'la sesión no está abierta' };
+    }
+    const readVersion = async (): Promise<number | null> => {
+      try {
+        const versions = await (this.client as any)?.authState?.keys?.get('app-state-sync-version', ['regular']);
+        const raw = (versions as any)?.regular;
+        const v = typeof raw === 'number' ? raw : Number(raw?.version ?? NaN);
+        return Number.isFinite(v) ? v : null;
+      } catch {
+        return null;
+      }
+    };
+    // Una sola sincronización a la vez por instancia.
+    if (this.labelSyncRunning) {
+      await this.labelSyncRunning.catch(() => {});
+      const v = await readVersion();
+      return { synced: true, fromVersion: v, toVersion: v, detail: 'ya había una sincronización en curso' };
+    }
+    const fromVersion = await readVersion();
+    if (fromVersion === null || fromVersion < 1) {
+      return { synced: false, fromVersion, toVersion: fromVersion, detail: 'sin baseline de la colección regular' };
+    }
+    this.labelSyncRunning = this.client.resyncAppState(['regular'], false);
+    try {
+      await this.labelSyncRunning;
+    } catch (error) {
+      return { synced: false, fromVersion, toVersion: await readVersion(), detail: `falló la sincronización: ${error}` };
+    } finally {
+      this.labelSyncRunning = null;
+    }
+    const toVersion = await readVersion();
+    return { synced: true, fromVersion, toVersion, detail: toVersion !== fromVersion ? 'hubo cambios' : 'sin cambios' };
+  }
+
   /** [Lylead] Solo lectura, expuesto en GET /label/writeStatus/{instance}. */
   public async labelWriteStatus(): Promise<{ ready: boolean; detail: string; connection: string | null }> {
     const connection = this.stateConnection?.state ?? null;
