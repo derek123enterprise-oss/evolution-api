@@ -493,9 +493,11 @@ export class BaileysStartupService extends ChannelStartupService {
       }
 
       const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
-      // 408 = request timeout â€” added per #2501 to avoid reconnect loops on
-      // transient network drops where the server returned a 408 in the close.
-      const codesToNotReconnect = [DisconnectReason.loggedOut, DisconnectReason.forbidden, 402, 406, 408];
+      // [Lylead] 408 (connectionLost / timedOut) NO va en esta lista. 2.4.0-rc2 lo
+      // agregó (#2501) y con eso cualquier corte de red dejaba la instancia en
+      // 'close' para siempre aunque la sesión siguiera vinculada (medido: canal
+      // cerrado el 28-oct por un "Connection was lost"). 2.3.7 y main reconectan.
+      const codesToNotReconnect = [DisconnectReason.loggedOut, DisconnectReason.forbidden, 402, 406];
 
       // FIX: Do not reconnect if it's the initial connection (waiting for QR code)
       // This prevents infinite loop that blocks QR code generation
@@ -2209,16 +2211,16 @@ export class BaileysStartupService extends ChannelStartupService {
               this.contactHandle['contacts.update'](payload);
             }
 
+            // [Lylead] Sin `return` entre los dos: un mismo lote puede traer la
+            // asociación y la edición de una lista, y el `return` descartaba la edición.
             if (events[Events.LABELS_ASSOCIATION]) {
               const payload = events[Events.LABELS_ASSOCIATION];
-              this.labelHandle[Events.LABELS_ASSOCIATION](payload, database);
-              return;
+              await this.labelHandle[Events.LABELS_ASSOCIATION](payload, database);
             }
 
             if (events[Events.LABELS_EDIT]) {
               const payload = events[Events.LABELS_EDIT];
-              this.labelHandle[Events.LABELS_EDIT](payload);
-              return;
+              await this.labelHandle[Events.LABELS_EDIT](payload);
             }
           }
         } catch (error) {
@@ -4813,10 +4815,14 @@ export class BaileysStartupService extends ChannelStartupService {
     try {
       verdict = await this.applyChatLabelPatch(targetJid, data.labelId, data.action);
       if (verdict && !verdict.ok) {
-        // Un rechazo casi siempre es copia local desfasada: resincronizar completo y reintentar una vez.
-        this.logger.warn('[labels] full app-state resync of "regular" before retrying');
-        await this.client.resyncAppState(['regular'], true);
-        verdict = await this.applyChatLabelPatch(targetJid, data.labelId, data.action);
+        // [Lylead] Un rechazo casi siempre es copia local desfasada. Se resincroniza
+        // para reparar la copia, pero NO se reintenta la escritura: dos parches
+        // rechazados seguidos son justo el patrón que WhatsApp trata como estado
+        // corrupto. El llamador reintenta más tarde con la copia ya reparada.
+        this.logger.warn('[labels] patch rechazado; se resincroniza "regular" sin reintentar la escritura');
+        await this.client.resyncAppState(['regular'], false).catch((e: any) => {
+          this.logger.warn(`[labels] resync tras rechazo falló: ${e}`);
+        });
       }
     } catch (error) {
       throw new BadRequestException(`Unable to ${data.action} label to chat`, error.toString());
@@ -4859,6 +4865,16 @@ export class BaileysStartupService extends ChannelStartupService {
    *  2. Un baseline vÃ¡lido de la colecciÃ³n 'regular' (version >= 1). Con version 0
    *     el parche sale con LTHash vacÃ­o y el servidor lo rechaza.
    */
+  /** [Lylead] Solo lectura, expuesto en GET /label/writeStatus/{instance}. */
+  public async labelWriteStatus(): Promise<{ ready: boolean; detail: string; connection: string | null }> {
+    const connection = this.stateConnection?.state ?? null;
+    if (connection !== 'open') {
+      return { ready: false, detail: `la sesión no está abierta (${connection ?? 'sin estado'})`, connection };
+    }
+    const readiness = await this.getAppStateReadiness();
+    return { ...readiness, connection };
+  }
+
   private async getAppStateReadiness(): Promise<{ ready: boolean; detail: string }> {
     try {
       const authState = (this.client as any)?.authState;
