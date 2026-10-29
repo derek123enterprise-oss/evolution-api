@@ -72,3 +72,10 @@ En el servidor queda la imagen anterior etiquetada `lylead-labels-rollback-20261
 `generateLinkPreview` (formato de anuncio). Sólo se activa con
 `EVOLUTION_EXTERNAL_AD_PREVIEW=true`. Con `linkPreview` distinto de `false`, Baileys
 genera su vista previa nativa (`generateHighQualityLinkPreview`), igual que en 2.3.7.
+
+## Carrusel con botones que sí responden (9dadb81)
+Con el nodo `biz` simple (`buildInteractiveBizNode`) el carrusel llegaba pero sus botones
+no hacían nada. `carouselMessage` ahora manda el nodo `biz` completo (`actual_actors`,
+`host_storage`, `privacy_mode_ts` + `quality_control`, como Itsukichan/Baileys) y
+`messageParamsJson` + título en cada tarjeta. Probado 2026-10-28: "Lo quiero" llega al
+webhook con su id. No volver al nodo simple en el carrusel.
