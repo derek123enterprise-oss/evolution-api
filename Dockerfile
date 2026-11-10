@@ -16,6 +16,7 @@ COPY ./patches ./patches
 # El postinstall aplica el guard de app-state a Baileys (tools/patch-baileys-appstate.js),
 # así que el script tiene que estar en la imagen ANTES de `npm ci`.
 COPY ./tools/patch-baileys-appstate.js ./tools/patch-baileys-appstate.js
+COPY ./tools/patch-baileys-status-ack.js ./tools/patch-baileys-status-ack.js
 
 RUN npm ci --silent
 
